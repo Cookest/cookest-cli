@@ -1,0 +1,16 @@
+# Build output
+target/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Generated instance files (from `cookest init`)
+.env
+cookest.toml
+docker-compose.yml
+Caddyfile
+data/
+backups/
