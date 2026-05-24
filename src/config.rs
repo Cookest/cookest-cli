@@ -32,3 +32,9 @@ pub struct NetworkConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DatabaseConfig {
+    pub food_db_password: String,
+    pub app_db_password: String,
+    pub food_db_port: u16,
+    pub app_db_port: u16,
+}
