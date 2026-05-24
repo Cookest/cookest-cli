@@ -38,3 +38,10 @@ pub struct DatabaseConfig {
     pub food_db_port: u16,
     pub app_db_port: u16,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuthConfig {
+    pub jwt_secret: String,
+    pub access_token_expiry_secs: u64,
+    pub refresh_token_expiry_secs: u64,
+}
