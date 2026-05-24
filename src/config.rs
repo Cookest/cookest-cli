@@ -23,3 +23,12 @@ pub struct InstanceConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NetworkConfig {
+    pub domain: String,
+    pub https_enabled: bool,
+    pub admin_port: u16,
+    pub food_api_port: u16,
+    pub app_api_port: u16,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
