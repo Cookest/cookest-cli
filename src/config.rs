@@ -45,3 +45,12 @@ pub struct AuthConfig {
     pub access_token_expiry_secs: u64,
     pub refresh_token_expiry_secs: u64,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServicesConfig {
+    pub image_gen_enabled: bool,
+    pub stripe_enabled: bool,
+    pub stripe_webhook_secret: String,
+    pub pdf_pipeline_enabled: bool,
+    pub etl_enabled: bool,
+}
