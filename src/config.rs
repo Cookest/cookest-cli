@@ -86,3 +86,27 @@ impl CookestConfig {
     }
 
     pub fn load(instance_dir: &Path) -> Result<Self, Box<dyn std::error::Error>> {
+        let path = Self::config_path(instance_dir);
+        let content = std::fs::read_to_string(&path)?;
+        let config: Self = toml::from_str(&content)?;
+        Ok(config)
+    }
+
+    pub fn save(&self, instance_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+        let path = Self::config_path(instance_dir);
+        let content = toml::to_string_pretty(self)?;
+        std::fs::write(&path, content)?;
+        Ok(())
+    }
+
+    pub fn default_with_secrets() -> Self {
+        Self {
+            instance: InstanceConfig {
+                name: "cookest".to_string(),
+                data_dir: PathBuf::from("./data"),
+                version: env!("CARGO_PKG_VERSION").to_string(),
+            },
+            network: NetworkConfig {
+                domain: "localhost".to_string(),
+                https_enabled: false,
+                admin_port: 3001,
