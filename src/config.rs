@@ -70,3 +70,19 @@ pub struct AiConfig {
 pub struct EmailConfig {
     pub enabled: bool,
     pub provider: String,
+    pub resend_api_key: String,
+    pub from_address: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdminConfig {
+    pub email: String,
+    pub password: String,
+}
+
+impl CookestConfig {
+    pub fn config_path(instance_dir: &Path) -> PathBuf {
+        instance_dir.join("cookest.toml")
+    }
+
+    pub fn load(instance_dir: &Path) -> Result<Self, Box<dyn std::error::Error>> {
