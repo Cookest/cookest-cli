@@ -54,3 +54,19 @@ pub struct ServicesConfig {
     pub pdf_pipeline_enabled: bool,
     pub etl_enabled: bool,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AiConfig {
+    pub enabled: bool,
+    pub provider: String,
+    pub ollama_model: String,
+    pub ollama_vision_model: String,
+    pub ollama_url: String,
+    pub chat_rate_limit_free: u32,
+    pub chat_rate_limit_pro: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmailConfig {
+    pub enabled: bool,
+    pub provider: String,
