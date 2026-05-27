@@ -110,3 +110,61 @@ impl CookestConfig {
                 domain: "localhost".to_string(),
                 https_enabled: false,
                 admin_port: 3001,
+                food_api_port: 8081,
+                app_api_port: 8080,
+            },
+            database: DatabaseConfig {
+                food_db_password: generate_secret(32),
+                app_db_password: generate_secret(32),
+                food_db_port: 5432,
+                app_db_port: 5433,
+            },
+            auth: AuthConfig {
+                jwt_secret: generate_secret(64),
+                access_token_expiry_secs: 900,
+                refresh_token_expiry_secs: 604800,
+            },
+            services: ServicesConfig {
+                image_gen_enabled: false,
+                stripe_enabled: false,
+                stripe_webhook_secret: String::new(),
+                pdf_pipeline_enabled: false,
+                etl_enabled: true,
+            },
+            ai: AiConfig {
+                enabled: true,
+                provider: "ollama".to_string(),
+                ollama_model: "llama3.2".to_string(),
+                ollama_vision_model: "llava".to_string(),
+                ollama_url: "http://ollama:11434".to_string(),
+                chat_rate_limit_free: 10,
+                chat_rate_limit_pro: 0,
+            },
+            email: EmailConfig {
+                enabled: false,
+                provider: "resend".to_string(),
+                resend_api_key: String::new(),
+                from_address: "noreply@cookest.local".to_string(),
+            },
+            admin: AdminConfig {
+                email: String::new(),
+                password: String::new(),
+            },
+        }
+    }
+}
+
+/// Generate a cryptographically random hex string of the given byte length.
+pub fn generate_secret(len: usize) -> String {
+    use rand::Rng;
+    let mut rng = rand::rng();
+    let bytes: Vec<u8> = (0..len).map(|_| rng.random()).collect();
+    hex::encode(&bytes)
+}
+
+/// Hex encoding without pulling in another crate — just use the basic approach.
+mod hex {
+    pub fn encode(bytes: &[u8]) -> String {
+        bytes.iter().map(|b| format!("{b:02x}")).collect()
+    }
+}
