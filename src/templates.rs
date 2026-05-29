@@ -66,3 +66,30 @@ pub fn render_compose(config: &CookestConfig) -> String {
     ));
 
     // ── Food API ──
+    services.push_str(&format!(
+        r#"  food-api:
+    image: ghcr.io/cookest/food-api:latest
+    container_name: cookest_food_api
+    restart: unless-stopped
+    ports:
+      - "{food_api_port}:8081"
+    environment:
+      FOOD_DATABASE_URL: "postgresql://postgres:{food_db_pass}@food-db:5432/cookest_food"
+      FOOD_HOST: "0.0.0.0"
+      FOOD_PORT: "8081"
+      FOOD_CORS_ORIGIN: "*"
+      RUST_LOG: "info,cookest_food_api=debug"
+    depends_on:
+      food-db:
+        condition: service_healthy
+    networks:
+      - cookest
+
+"#,
+        food_api_port = config.network.food_api_port,
+        food_db_pass = config.database.food_db_password,
+    ));
+
+    // ── App API ──
+    let ollama_url = if config.ai.enabled {
+        "http://ollama:11434".to_string()
