@@ -93,3 +93,71 @@ pub fn render_compose(config: &CookestConfig) -> String {
     // ── App API ──
     let ollama_url = if config.ai.enabled {
         "http://ollama:11434".to_string()
+    } else {
+        String::new()
+    };
+
+    services.push_str(&format!(
+        r#"  app-api:
+    image: ghcr.io/cookest/app-api:latest
+    container_name: cookest_app_api
+    restart: unless-stopped
+    ports:
+      - "{app_api_port}:8080"
+    environment:
+      APP_DATABASE_URL: "postgresql://postgres:{app_db_pass}@app-db:5432/cookest_app"
+      HOST: "0.0.0.0"
+      PORT: "8080"
+      JWT_SECRET: "{jwt_secret}"
+      CORS_ORIGIN: "{cors_origin}"
+      OLLAMA_URL: "{ollama_url}"
+      OLLAMA_MODEL: "{ollama_model}"
+      OLLAMA_VISION_MODEL: "{ollama_vision_model}"
+      OLLAMA_VISION_TIMEOUT_SECS: "120"
+      PDF_UPLOAD_DIR: "/data/pdfs"
+      STRIPE_WEBHOOK_SECRET: "{stripe_secret}"
+      FOOD_API_URL: "http://food-api:8081"
+      FOOD_API_KEY: ""
+      IMAGE_GEN_URL: "{image_gen_url}"
+      RUST_LOG: "info,cookest_app_api=debug"
+    volumes:
+      - pdf_uploads:/data/pdfs
+    depends_on:
+      app-db:
+        condition: service_healthy
+      food-api:
+        condition: service_started
+    networks:
+      - cookest
+
+"#,
+        app_api_port = config.network.app_api_port,
+        app_db_pass = config.database.app_db_password,
+        jwt_secret = config.auth.jwt_secret,
+        cors_origin = if config.network.https_enabled {
+            format!("https://{}", config.network.domain)
+        } else {
+            format!("http://{}:{}", config.network.domain, config.network.admin_port)
+        },
+        ollama_url = ollama_url,
+        ollama_model = config.ai.ollama_model,
+        ollama_vision_model = config.ai.ollama_vision_model,
+        stripe_secret = config.services.stripe_webhook_secret,
+        image_gen_url = if config.services.image_gen_enabled {
+            "http://image-gen:8090".to_string()
+        } else {
+            String::new()
+        },
+    ));
+
+    // ── Admin Panel ──
+    services.push_str(&format!(
+        r#"  admin:
+    image: ghcr.io/cookest/admin:latest
+    container_name: cookest_admin
+    restart: unless-stopped
+    ports:
+      - "{admin_port}:3000"
+    environment:
+      NEXT_PUBLIC_APP_API_URL: "http://app-api:8080"
+      NEXT_PUBLIC_FOOD_API_URL: "http://food-api:8081"
