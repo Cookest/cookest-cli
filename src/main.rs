@@ -1,3 +1,2 @@
-fn main() {
-  println!("Cookest CLI stub");
-}
+use clap::Parser;
+fn main() {}
