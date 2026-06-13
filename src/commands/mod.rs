@@ -1,1 +1,9 @@
+pub mod backup;
 pub mod config;
+pub mod down;
+pub mod init;
+pub mod logs;
+pub mod restore;
+pub mod status;
+pub mod up;
+pub mod update;
