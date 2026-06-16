@@ -99,6 +99,14 @@ impl CookestConfig {
         Ok(())
     }
 
+    /// Container name prefix derived from instance name.
+    pub fn container_prefix(&self) -> String {
+        self.instance
+            .name
+            .to_lowercase()
+            .replace(|c: char| !c.is_alphanumeric() && c != '-', "_")
+    }
+
     pub fn default_with_secrets() -> Self {
         Self {
             instance: InstanceConfig {
