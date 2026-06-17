@@ -11,11 +11,13 @@ pub fn render_compose(config: &CookestConfig) -> String {
 "#,
     );
 
+    let prefix = config.container_prefix();
+
     // ── Food DB ──
     services.push_str(&format!(
         r#"  food-db:
     image: postgres:16-alpine
-    container_name: cookest_food_db
+    container_name: {prefix}_food_db
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
@@ -34,6 +36,7 @@ pub fn render_compose(config: &CookestConfig) -> String {
       - cookest
 
 "#,
+        prefix = prefix,
         food_db_pass = config.database.food_db_password,
         food_db_port = config.database.food_db_port,
     ));
@@ -42,7 +45,7 @@ pub fn render_compose(config: &CookestConfig) -> String {
     services.push_str(&format!(
         r#"  app-db:
     image: postgres:16-alpine
-    container_name: cookest_app_db
+    container_name: {prefix}_app_db
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
@@ -61,6 +64,7 @@ pub fn render_compose(config: &CookestConfig) -> String {
       - cookest
 
 "#,
+        prefix = prefix,
         app_db_pass = config.database.app_db_password,
         app_db_port = config.database.app_db_port,
     ));
@@ -69,7 +73,7 @@ pub fn render_compose(config: &CookestConfig) -> String {
     services.push_str(&format!(
         r#"  food-api:
     image: ghcr.io/cookest/food-api:latest
-    container_name: cookest_food_api
+    container_name: {prefix}_food_api
     restart: unless-stopped
     ports:
       - "{food_api_port}:8081"
@@ -86,6 +90,7 @@ pub fn render_compose(config: &CookestConfig) -> String {
       - cookest
 
 "#,
+        prefix = prefix,
         food_api_port = config.network.food_api_port,
         food_db_pass = config.database.food_db_password,
     ));
@@ -100,7 +105,7 @@ pub fn render_compose(config: &CookestConfig) -> String {
     services.push_str(&format!(
         r#"  app-api:
     image: ghcr.io/cookest/app-api:latest
-    container_name: cookest_app_api
+    container_name: {prefix}_app_api
     restart: unless-stopped
     ports:
       - "{app_api_port}:8080"
@@ -131,6 +136,7 @@ pub fn render_compose(config: &CookestConfig) -> String {
       - cookest
 
 "#,
+        prefix = prefix,
         app_api_port = config.network.app_api_port,
         app_db_pass = config.database.app_db_password,
         jwt_secret = config.auth.jwt_secret,
@@ -154,7 +160,7 @@ pub fn render_compose(config: &CookestConfig) -> String {
     services.push_str(&format!(
         r#"  admin:
     image: ghcr.io/cookest/admin:latest
-    container_name: cookest_admin
+    container_name: {prefix}_admin
     restart: unless-stopped
     ports:
       - "{admin_port}:3000"
@@ -175,6 +181,7 @@ pub fn render_compose(config: &CookestConfig) -> String {
       - cookest
 
 "#,
+        prefix = prefix,
         admin_port = config.network.admin_port,
         instance_name = config.instance.name,
         ai_enabled = config.ai.enabled,
@@ -185,10 +192,10 @@ pub fn render_compose(config: &CookestConfig) -> String {
 
     // ── Ollama (optional) ──
     if config.ai.enabled {
-        services.push_str(
+        services.push_str(&format!(
             r#"  ollama:
     image: ollama/ollama:latest
-    container_name: cookest_ollama
+    container_name: {prefix}_ollama
     restart: unless-stopped
     ports:
       - "11434:11434"
@@ -198,16 +205,17 @@ pub fn render_compose(config: &CookestConfig) -> String {
       - cookest
 
 "#,
-        );
+            prefix = prefix,
+        ));
         volumes.push_str("  ollama_data:\n");
     }
 
     // ── Image Gen (optional) ──
     if config.services.image_gen_enabled {
-        services.push_str(
+        services.push_str(&format!(
             r#"  image-gen:
     image: ghcr.io/cookest/image-gen:latest
-    container_name: cookest_image_gen
+    container_name: {prefix}_image_gen
     restart: unless-stopped
     ports:
       - "8090:8090"
@@ -217,7 +225,8 @@ pub fn render_compose(config: &CookestConfig) -> String {
       - cookest
 
 "#,
-        );
+            prefix = prefix,
+        ));
     }
 
     // ── Caddy reverse proxy (optional, for HTTPS) ──
@@ -225,7 +234,7 @@ pub fn render_compose(config: &CookestConfig) -> String {
         services.push_str(&format!(
             r#"  caddy:
     image: caddy:2-alpine
-    container_name: cookest_caddy
+    container_name: {prefix}_caddy
     restart: unless-stopped
     ports:
       - "80:80"
@@ -242,6 +251,7 @@ pub fn render_compose(config: &CookestConfig) -> String {
       - cookest
 
 "#,
+            prefix = prefix,
         ));
         volumes.push_str("  caddy_data:\n  caddy_config:\n");
     }
@@ -321,7 +331,6 @@ RESEND_FROM_EMAIL={from_email}
         stripe_secret = config.services.stripe_webhook_secret,
         ollama_model = config.ai.ollama_model,
         ollama_vision_model = config.ai.ollama_vision_model,
-        resend_key = config.email.resend_api_key,
         from_email = config.email.from_address,
     )
 }
