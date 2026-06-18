@@ -29,12 +29,14 @@ pub async fn run(args: BackupArgs) -> Result<(), Box<dyn std::error::Error>> {
 
     println!("{}", "Backing up databases...".dimmed());
 
+    let prefix = config.container_prefix();
+
     // Food DB
     let food_backup = backup_dir.join(format!("food_db_{timestamp}.dump"));
     print!("  Food DB... ");
     docker::backup_database(
         &instance_dir,
-        "cookest_food_db",
+        &format!("{prefix}_food_db"),
         "cookest_food",
         &config.database.food_db_password,
         &food_backup,
@@ -46,7 +48,7 @@ pub async fn run(args: BackupArgs) -> Result<(), Box<dyn std::error::Error>> {
     print!("  App DB... ");
     docker::backup_database(
         &instance_dir,
-        "cookest_app_db",
+        &format!("{prefix}_app_db"),
         "cookest_app",
         &config.database.app_db_password,
         &app_backup,
