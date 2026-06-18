@@ -3,7 +3,6 @@ use colored::Colorize;
 use std::path::PathBuf;
 
 use crate::config::CookestConfig;
-use crate::docker;
 
 #[derive(Args)]
 pub struct StatusArgs {
@@ -31,15 +30,16 @@ pub async fn run(args: StatusArgs) -> Result<(), Box<dyn std::error::Error>> {
     // Service health checks
     println!("{}", "Services:".bold());
 
+    let prefix = config.container_prefix();
     let services = [
-        ("Food DB", "cookest_food_db", true),
-        ("App DB", "cookest_app_db", true),
-        ("Food API", "cookest_food_api", true),
-        ("App API", "cookest_app_api", true),
-        ("Admin Panel", "cookest_admin", true),
-        ("Ollama", "cookest_ollama", config.ai.enabled),
-        ("Image Gen", "cookest_image_gen", config.services.image_gen_enabled),
-        ("Caddy", "cookest_caddy", config.network.https_enabled),
+        ("Food DB", format!("{prefix}_food_db"), true),
+        ("App DB", format!("{prefix}_app_db"), true),
+        ("Food API", format!("{prefix}_food_api"), true),
+        ("App API", format!("{prefix}_app_api"), true),
+        ("Admin Panel", format!("{prefix}_admin"), true),
+        ("Ollama", format!("{prefix}_ollama"), config.ai.enabled),
+        ("Image Gen", format!("{prefix}_image_gen"), config.services.image_gen_enabled),
+        ("Caddy", format!("{prefix}_caddy"), config.network.https_enabled),
     ];
 
     for (name, container, enabled) in &services {
