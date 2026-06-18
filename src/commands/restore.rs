@@ -41,11 +41,13 @@ pub async fn run(args: RestoreArgs) -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
+    let prefix = config.container_prefix();
+
     if let Some(ref food_path) = args.food_db {
         print!("  Restoring Food DB... ");
         docker::restore_database(
             &instance_dir,
-            "cookest_food_db",
+            &format!("{prefix}_food_db"),
             "cookest_food",
             &config.database.food_db_password,
             food_path,
@@ -57,7 +59,7 @@ pub async fn run(args: RestoreArgs) -> Result<(), Box<dyn std::error::Error>> {
         print!("  Restoring App DB... ");
         docker::restore_database(
             &instance_dir,
-            "cookest_app_db",
+            &format!("{prefix}_app_db"),
             "cookest_app",
             &config.database.app_db_password,
             app_path,
