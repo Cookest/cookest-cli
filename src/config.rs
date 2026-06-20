@@ -89,6 +89,7 @@ impl CookestConfig {
         let path = Self::config_path(instance_dir);
         let content = std::fs::read_to_string(&path)?;
         let config: Self = toml::from_str(&content)?;
+        config.validate()?;
         Ok(config)
     }
 
