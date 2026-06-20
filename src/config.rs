@@ -92,10 +92,41 @@ impl CookestConfig {
         Ok(config)
     }
 
-    pub fn save(&self, instance_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
-        let path = Self::config_path(instance_dir);
-        let content = toml::to_string_pretty(self)?;
-        std::fs::write(&path, content)?;
+    /// Validate configuration values.
+    pub fn validate(&self) -> Result<(), Box<dyn std::error::Error>> {
+        validate_port(self.network.admin_port, "admin_port")?;
+        validate_port(self.network.food_api_port, "food_api_port")?;
+        validate_port(self.network.app_api_port, "app_api_port")?;
+        validate_port(self.database.food_db_port, "food_db_port")?;
+        validate_port(self.database.app_db_port, "app_db_port")?;
+
+        let ports = [
+            (self.network.admin_port, "admin_port"),
+            (self.network.food_api_port, "food_api_port"),
+            (self.network.app_api_port, "app_api_port"),
+            (self.database.food_db_port, "food_db_port"),
+            (self.database.app_db_port, "app_db_port"),
+        ];
+        for i in 0..ports.len() {
+            for j in (i + 1)..ports.len() {
+                if ports[i].0 == ports[j].0 {
+                    return Err(format!(
+                        "port conflict: {} and {} both use port {}",
+                        ports[i].1, ports[j].1, ports[i].0
+                    )
+                    .into());
+                }
+            }
+        }
+
+        if self.auth.jwt_secret.len() < 32 {
+            return Err("jwt_secret must be at least 32 characters".into());
+        }
+
+        if self.instance.name.is_empty() {
+            return Err("instance name cannot be empty".into());
+        }
+
         Ok(())
     }
 
@@ -105,6 +136,13 @@ impl CookestConfig {
             .name
             .to_lowercase()
             .replace(|c: char| !c.is_alphanumeric() && c != '-', "_")
+    }
+
+    pub fn save(&self, instance_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+        let path = Self::config_path(instance_dir);
+        let content = toml::to_string_pretty(self)?;
+        std::fs::write(&path, content)?;
+        Ok(())
     }
 
     pub fn default_with_secrets() -> Self {
@@ -160,6 +198,14 @@ impl CookestConfig {
             },
         }
     }
+}
+
+/// Validate a port is in the valid range (1–65535).
+fn validate_port(port: u16, name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    if port == 0 {
+        return Err(format!("{name} cannot be 0").into());
+    }
+    Ok(())
 }
 
 /// Generate a cryptographically random hex string of the given byte length.
