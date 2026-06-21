@@ -114,6 +114,8 @@ pub fn render_compose(config: &CookestConfig) -> String {
       HOST: "0.0.0.0"
       PORT: "8080"
       JWT_SECRET: "{jwt_secret}"
+      JWT_ACCESS_EXPIRY_SECONDS: "{access_expiry}"
+      JWT_REFRESH_EXPIRY_SECONDS: "{refresh_expiry}"
       CORS_ORIGIN: "{cors_origin}"
       OLLAMA_URL: "{ollama_url}"
       OLLAMA_MODEL: "{ollama_model}"
@@ -124,6 +126,8 @@ pub fn render_compose(config: &CookestConfig) -> String {
       FOOD_API_URL: "http://food-api:8081"
       FOOD_API_KEY: ""
       IMAGE_GEN_URL: "{image_gen_url}"
+      RESEND_API_KEY: "{resend_key}"
+      RESEND_FROM_EMAIL: "{resend_from}"
       RUST_LOG: "info,cookest_app_api=debug"
     volumes:
       - pdf_uploads:/data/pdfs
@@ -140,6 +144,8 @@ pub fn render_compose(config: &CookestConfig) -> String {
         app_api_port = config.network.app_api_port,
         app_db_pass = config.database.app_db_password,
         jwt_secret = config.auth.jwt_secret,
+        access_expiry = config.auth.access_token_expiry_secs,
+        refresh_expiry = config.auth.refresh_token_expiry_secs,
         cors_origin = if config.network.https_enabled {
             format!("https://{}", config.network.domain)
         } else {
@@ -154,6 +160,8 @@ pub fn render_compose(config: &CookestConfig) -> String {
         } else {
             String::new()
         },
+        resend_key = config.email.resend_api_key,
+        resend_from = config.email.from_address,
     ));
 
     // ── Admin Panel ──
@@ -331,6 +339,7 @@ RESEND_FROM_EMAIL={from_email}
         stripe_secret = config.services.stripe_webhook_secret,
         ollama_model = config.ai.ollama_model,
         ollama_vision_model = config.ai.ollama_vision_model,
+        resend_key = config.email.resend_api_key,
         from_email = config.email.from_address,
     )
 }
