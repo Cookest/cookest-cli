@@ -4,8 +4,7 @@ use dialoguer::{Confirm, Input, Select};
 use std::path::PathBuf;
 
 use crate::config::{
-    AdminConfig, AiConfig, AuthConfig, CookestConfig, DatabaseConfig, EmailConfig, InstanceConfig,
-    NetworkConfig, ServicesConfig, generate_secret,
+    CookestConfig, generate_secret,
 };
 use crate::docker;
 use crate::templates;

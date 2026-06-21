@@ -1,8 +1,6 @@
 use std::path::Path;
 use std::process::Command;
 
-use crate::config::CookestConfig;
-
 pub fn compose_command(instance_dir: &Path) -> Command {
     let mut cmd = Command::new("docker");
     cmd.args(["compose", "-f"])
@@ -84,7 +82,7 @@ pub fn compose_ps(instance_dir: &Path) -> Result<String, Box<dyn std::error::Err
 }
 
 pub fn backup_database(
-    instance_dir: &Path,
+    _instance_dir: &Path,
     container_name: &str,
     db_name: &str,
     db_password: &str,
@@ -104,7 +102,7 @@ pub fn backup_database(
 }
 
 pub fn restore_database(
-    instance_dir: &Path,
+    _instance_dir: &Path,
     container_name: &str,
     db_name: &str,
     db_password: &str,
