@@ -29,4 +29,5 @@ base64 = "0.22"
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "2"
 
-# Cookest CLI - Self-hosted manager
+[dev-dependencies]
+tempfile = "3"
