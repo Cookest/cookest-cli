@@ -343,3 +343,287 @@ RESEND_FROM_EMAIL={from_email}
         from_email = config.email.from_address,
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::*;
+    use std::path::PathBuf;
+
+    fn test_config() -> CookestConfig {
+        CookestConfig {
+            instance: InstanceConfig {
+                name: "test-instance".to_string(),
+                data_dir: PathBuf::from("./data"),
+                version: "0.1.0".to_string(),
+            },
+            network: NetworkConfig {
+                domain: "localhost".to_string(),
+                https_enabled: false,
+                admin_port: 3001,
+                food_api_port: 8081,
+                app_api_port: 8080,
+            },
+            database: DatabaseConfig {
+                food_db_password: "food_pass".to_string(),
+                app_db_password: "app_pass".to_string(),
+                food_db_port: 5432,
+                app_db_port: 5433,
+            },
+            auth: AuthConfig {
+                jwt_secret: "a".repeat(64),
+                access_token_expiry_secs: 900,
+                refresh_token_expiry_secs: 604800,
+            },
+            services: ServicesConfig {
+                image_gen_enabled: false,
+                stripe_enabled: false,
+                stripe_webhook_secret: String::new(),
+                pdf_pipeline_enabled: false,
+                etl_enabled: true,
+            },
+            ai: AiConfig {
+                enabled: false,
+                provider: "ollama".to_string(),
+                ollama_model: "llama3.2".to_string(),
+                ollama_vision_model: "llava".to_string(),
+                ollama_url: "http://ollama:11434".to_string(),
+                chat_rate_limit_free: 10,
+                chat_rate_limit_pro: 0,
+            },
+            email: EmailConfig {
+                enabled: false,
+                provider: "resend".to_string(),
+                resend_api_key: String::new(),
+                from_address: "noreply@test.local".to_string(),
+            },
+            admin: AdminConfig {
+                email: "admin@test.local".to_string(),
+                password: "test_password".to_string(),
+            },
+        }
+    }
+
+    // ── Docker Compose rendering ──────────────────────────────────
+
+    #[test]
+    fn compose_contains_core_services() {
+        let config = test_config();
+        let compose = render_compose(&config);
+        assert!(compose.contains("food-db:"));
+        assert!(compose.contains("app-db:"));
+        assert!(compose.contains("food-api:"));
+        assert!(compose.contains("app-api:"));
+        assert!(compose.contains("admin:"));
+    }
+
+    #[test]
+    fn compose_uses_instance_prefix() {
+        let config = test_config();
+        let compose = render_compose(&config);
+        assert!(compose.contains("container_name: test-instance_food_db"));
+        assert!(compose.contains("container_name: test-instance_app_api"));
+        assert!(compose.contains("container_name: test-instance_admin"));
+    }
+
+    #[test]
+    fn compose_includes_db_passwords() {
+        let config = test_config();
+        let compose = render_compose(&config);
+        assert!(compose.contains("food_pass"));
+        assert!(compose.contains("app_pass"));
+    }
+
+    #[test]
+    fn compose_includes_jwt_secret() {
+        let config = test_config();
+        let compose = render_compose(&config);
+        assert!(compose.contains(&config.auth.jwt_secret));
+    }
+
+    #[test]
+    fn compose_includes_jwt_expiry() {
+        let config = test_config();
+        let compose = render_compose(&config);
+        assert!(compose.contains("JWT_ACCESS_EXPIRY_SECONDS: \"900\""));
+        assert!(compose.contains("JWT_REFRESH_EXPIRY_SECONDS: \"604800\""));
+    }
+
+    #[test]
+    fn compose_includes_email_env_vars() {
+        let mut config = test_config();
+        config.email.resend_api_key = "re_test_key".to_string();
+        config.email.from_address = "noreply@example.com".to_string();
+        let compose = render_compose(&config);
+        assert!(compose.contains("RESEND_API_KEY: \"re_test_key\""));
+        assert!(compose.contains("RESEND_FROM_EMAIL: \"noreply@example.com\""));
+    }
+
+    #[test]
+    fn compose_excludes_ollama_when_disabled() {
+        let mut config = test_config();
+        config.ai.enabled = false;
+        let compose = render_compose(&config);
+        assert!(!compose.contains("ollama:"));
+        assert!(!compose.contains("ollama_data:"));
+    }
+
+    #[test]
+    fn compose_includes_ollama_when_enabled() {
+        let mut config = test_config();
+        config.ai.enabled = true;
+        let compose = render_compose(&config);
+        assert!(compose.contains("ollama:"));
+        assert!(compose.contains("ollama/ollama:latest"));
+        assert!(compose.contains("ollama_data:"));
+    }
+
+    #[test]
+    fn compose_excludes_image_gen_when_disabled() {
+        let config = test_config();
+        let compose = render_compose(&config);
+        assert!(!compose.contains("image-gen:"));
+    }
+
+    #[test]
+    fn compose_includes_image_gen_when_enabled() {
+        let mut config = test_config();
+        config.services.image_gen_enabled = true;
+        let compose = render_compose(&config);
+        assert!(compose.contains("image-gen:"));
+        assert!(compose.contains("ghcr.io/cookest/image-gen:latest"));
+    }
+
+    #[test]
+    fn compose_excludes_caddy_when_no_https() {
+        let config = test_config();
+        let compose = render_compose(&config);
+        assert!(!compose.contains("caddy:"));
+    }
+
+    #[test]
+    fn compose_includes_caddy_when_https() {
+        let mut config = test_config();
+        config.network.https_enabled = true;
+        let compose = render_compose(&config);
+        assert!(compose.contains("caddy:"));
+        assert!(compose.contains("caddy:2-alpine"));
+        assert!(compose.contains("caddy_data:"));
+    }
+
+    #[test]
+    fn compose_has_correct_ports() {
+        let config = test_config();
+        let compose = render_compose(&config);
+        assert!(compose.contains("\"5432:5432\""));
+        assert!(compose.contains("\"5433:5432\""));
+        assert!(compose.contains("\"8081:8081\""));
+        assert!(compose.contains("\"8080:8080\""));
+        assert!(compose.contains("\"3001:3000\""));
+    }
+
+    #[test]
+    fn compose_has_network() {
+        let config = test_config();
+        let compose = render_compose(&config);
+        assert!(compose.contains("networks:"));
+        assert!(compose.contains("cookest:"));
+        assert!(compose.contains("driver: bridge"));
+    }
+
+    #[test]
+    fn compose_has_healthchecks() {
+        let config = test_config();
+        let compose = render_compose(&config);
+        assert!(compose.contains("healthcheck:"));
+        assert!(compose.contains("pg_isready"));
+    }
+
+    #[test]
+    fn compose_has_depends_on() {
+        let config = test_config();
+        let compose = render_compose(&config);
+        assert!(compose.contains("depends_on:"));
+        assert!(compose.contains("service_healthy"));
+    }
+
+    #[test]
+    fn compose_cors_origin_http_for_localhost() {
+        let config = test_config();
+        let compose = render_compose(&config);
+        assert!(compose.contains("CORS_ORIGIN: \"http://localhost:3001\""));
+    }
+
+    #[test]
+    fn compose_cors_origin_https_for_domain() {
+        let mut config = test_config();
+        config.network.domain = "cookest.example.com".to_string();
+        config.network.https_enabled = true;
+        let compose = render_compose(&config);
+        assert!(compose.contains("CORS_ORIGIN: \"https://cookest.example.com\""));
+    }
+
+    #[test]
+    fn compose_feature_flags_in_admin() {
+        let mut config = test_config();
+        config.ai.enabled = true;
+        config.services.stripe_enabled = true;
+        let compose = render_compose(&config);
+        assert!(compose.contains("COOKEST_AI_ENABLED: \"true\""));
+        assert!(compose.contains("COOKEST_STRIPE_ENABLED: \"true\""));
+    }
+
+    // ── Caddyfile rendering ───────────────────────────────────────
+
+    #[test]
+    fn caddyfile_contains_domain() {
+        let mut config = test_config();
+        config.network.domain = "example.com".to_string();
+        let caddyfile = render_caddyfile(&config);
+        assert!(caddyfile.contains("example.com {"));
+    }
+
+    #[test]
+    fn caddyfile_contains_reverse_proxies() {
+        let config = test_config();
+        let caddyfile = render_caddyfile(&config);
+        assert!(caddyfile.contains("reverse_proxy food-api:8081"));
+        assert!(caddyfile.contains("reverse_proxy app-api:8080"));
+        assert!(caddyfile.contains("reverse_proxy admin:3000"));
+    }
+
+    #[test]
+    fn caddyfile_has_admin_email() {
+        let config = test_config();
+        let caddyfile = render_caddyfile(&config);
+        assert!(caddyfile.contains("email admin@test.local"));
+    }
+
+    // ── .env rendering ────────────────────────────────────────────
+
+    #[test]
+    fn env_contains_secrets() {
+        let config = test_config();
+        let env = render_env(&config);
+        assert!(env.contains("FOOD_DB_PASSWORD=food_pass"));
+        assert!(env.contains("APP_DB_PASSWORD=app_pass"));
+        assert!(env.contains(&format!("JWT_SECRET={}", config.auth.jwt_secret)));
+    }
+
+    #[test]
+    fn env_contains_ai_models() {
+        let config = test_config();
+        let env = render_env(&config);
+        assert!(env.contains("OLLAMA_MODEL=llama3.2"));
+        assert!(env.contains("OLLAMA_VISION_MODEL=llava"));
+    }
+
+    #[test]
+    fn env_contains_email_config() {
+        let mut config = test_config();
+        config.email.resend_api_key = "re_key123".to_string();
+        let env = render_env(&config);
+        assert!(env.contains("RESEND_API_KEY=re_key123"));
+        assert!(env.contains("RESEND_FROM_EMAIL=noreply@test.local"));
+    }
+}
