@@ -185,16 +185,21 @@ pub fn render_compose(config: &CookestConfig) -> String {
         s3_public_url = if config.network.https_enabled {
             format!("https://{}/images", config.network.domain)
         } else {
-            format!("http://{}:{}/images", config.network.domain, config.network.admin_port)
+            format!("http://{}:9000/{}", config.network.domain, config.s3.bucket)
         },
     ));
 
     // ── MinIO ──
+    let minio_ports = if config.network.https_enabled {
+        String::new()
+    } else {
+        "\n    ports:\n      - \"9000:9000\"".to_string()
+    };
     services.push_str(&format!(
         r#"  minio:
     image: minio/minio:latest
     container_name: {prefix}_minio
-    restart: unless-stopped
+    restart: unless-stopped{ports}
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: "{s3_access}"
@@ -226,6 +231,7 @@ pub fn render_compose(config: &CookestConfig) -> String {
 
 "#,
         prefix = prefix,
+        ports = minio_ports,
         s3_access = config.s3.access_key,
         s3_secret = config.s3.secret_key,
         s3_bucket = config.s3.bucket,
@@ -233,6 +239,16 @@ pub fn render_compose(config: &CookestConfig) -> String {
 
     // ── Admin Panel ──
     let admin_image = image_name(config, "admin");
+    let next_public_app_api_url = if config.network.https_enabled {
+        format!("https://{}", config.network.domain)
+    } else {
+        format!("http://{}:{}", config.network.domain, config.network.app_api_port)
+    };
+    let next_public_food_api_url = if config.network.https_enabled {
+        format!("https://{}/api/food", config.network.domain)
+    } else {
+        format!("http://{}:{}", config.network.domain, config.network.food_api_port)
+    };
     services.push_str(&format!(
         r#"  admin:
     image: {admin_image}
@@ -241,8 +257,8 @@ pub fn render_compose(config: &CookestConfig) -> String {
     ports:
       - "{admin_port}:3000"
     environment:
-      NEXT_PUBLIC_APP_API_URL: "http://app-api:8080"
-      NEXT_PUBLIC_FOOD_API_URL: "http://food-api:8081"
+      NEXT_PUBLIC_APP_API_URL: "{next_public_app_api_url}"
+      NEXT_PUBLIC_FOOD_API_URL: "{next_public_food_api_url}"
       APP_API_INTERNAL_URL: "http://app-api:8080"
       FOOD_API_INTERNAL_URL: "http://food-api:8081"
       COOKEST_INSTANCE_NAME: "{instance_name}"
@@ -258,6 +274,8 @@ pub fn render_compose(config: &CookestConfig) -> String {
 "#,
         prefix = prefix,
         admin_port = config.network.admin_port,
+        next_public_app_api_url = next_public_app_api_url,
+        next_public_food_api_url = next_public_food_api_url,
         instance_name = config.instance.name,
         ai_enabled = config.ai.enabled,
         stripe_enabled = config.services.stripe_enabled,
@@ -464,6 +482,14 @@ mod tests {
                 email: "admin@test.local".to_string(),
                 password: "test_password".to_string(),
             },
+            s3: S3Config {
+                endpoint: "http://minio:9000".to_string(),
+                access_key: "minioadmin".to_string(),
+                secret_key: "minioadmin".to_string(),
+                bucket: "cookest-images".to_string(),
+                region: "us-east-1".to_string(),
+                public_url: "http://localhost:9000/cookest-images".to_string(),
+            },
             images: crate::config::ImagesConfig::default(),
         }
     }
@@ -570,6 +596,7 @@ mod tests {
         assert!(compose.contains("\"8081:8081\""));
         assert!(compose.contains("\"8080:8080\""));
         assert!(compose.contains("\"3001:3000\""));
+        assert!(compose.contains("\"9000:9000\""));
     }
 
     #[test]

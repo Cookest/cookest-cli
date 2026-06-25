@@ -70,6 +70,9 @@ pub fn run(args: ConfigArgs) -> Result<(), Box<dyn std::error::Error>> {
             if !config_clone.services.stripe_webhook_secret.is_empty() {
                 output = output.replace(&config_clone.services.stripe_webhook_secret, "****");
             }
+            if !config_clone.s3.secret_key.is_empty() {
+                output = output.replace(&config_clone.s3.secret_key, "****");
+            }
 
             println!("{}", output);
         }

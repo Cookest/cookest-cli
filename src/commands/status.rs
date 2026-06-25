@@ -37,6 +37,7 @@ pub async fn run(args: StatusArgs) -> Result<(), Box<dyn std::error::Error>> {
         ("Food API", format!("{prefix}_food_api"), true),
         ("App API", format!("{prefix}_app_api"), true),
         ("Admin Panel", format!("{prefix}_admin"), true),
+        ("MinIO", format!("{prefix}_minio"), true),
         ("Ollama", format!("{prefix}_ollama"), config.ai.enabled),
         ("Caddy", format!("{prefix}_caddy"), config.network.https_enabled),
     ];
