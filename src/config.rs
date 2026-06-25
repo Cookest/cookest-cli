@@ -247,7 +247,7 @@ fn validate_port(port: u16, name: &str) -> Result<(), Box<dyn std::error::Error>
 pub fn generate_secret(len: usize) -> String {
     use rand::Rng;
     let mut rng = rand::rng();
-    let bytes: Vec<u8> = (0..len).map(|_| rng.random()).collect();
+    let bytes: Vec<u8> = (0..len).map(|_| rng.random::<u8>()).collect();
     hex::encode(&bytes)
 }
 
