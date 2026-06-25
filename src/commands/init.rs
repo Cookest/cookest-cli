@@ -188,11 +188,6 @@ fn interactive_setup() -> Result<CookestConfig, Box<dyn std::error::Error>> {
     // ── Services ──────────────────────────────────────────
     println!("\n{}", "── Optional Services ──".bold());
 
-    config.services.image_gen_enabled = Confirm::new()
-        .with_prompt("Enable AI image generation?")
-        .default(false)
-        .interact()?;
-
     config.services.stripe_enabled = Confirm::new()
         .with_prompt("Enable Stripe payments?")
         .default(false)

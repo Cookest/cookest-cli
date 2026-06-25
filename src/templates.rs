@@ -125,7 +125,6 @@ pub fn render_compose(config: &CookestConfig) -> String {
       STRIPE_WEBHOOK_SECRET: "{stripe_secret}"
       FOOD_API_URL: "http://food-api:8081"
       FOOD_API_KEY: ""
-      IMAGE_GEN_URL: "{image_gen_url}"
       RESEND_API_KEY: "{resend_key}"
       RESEND_FROM_EMAIL: "{resend_from}"
       RUST_LOG: "info,cookest_app_api=debug"
@@ -155,11 +154,6 @@ pub fn render_compose(config: &CookestConfig) -> String {
         ollama_model = config.ai.ollama_model,
         ollama_vision_model = config.ai.ollama_vision_model,
         stripe_secret = config.services.stripe_webhook_secret,
-        image_gen_url = if config.services.image_gen_enabled {
-            "http://image-gen:8090".to_string()
-        } else {
-            String::new()
-        },
         resend_key = config.email.resend_api_key,
         resend_from = config.email.from_address,
     ));
@@ -180,7 +174,6 @@ pub fn render_compose(config: &CookestConfig) -> String {
       COOKEST_INSTANCE_NAME: "{instance_name}"
       COOKEST_AI_ENABLED: "{ai_enabled}"
       COOKEST_STRIPE_ENABLED: "{stripe_enabled}"
-      COOKEST_IMAGE_GEN_ENABLED: "{image_gen_enabled}"
       COOKEST_PDF_PIPELINE_ENABLED: "{pdf_enabled}"
     depends_on:
       - app-api
@@ -194,7 +187,6 @@ pub fn render_compose(config: &CookestConfig) -> String {
         instance_name = config.instance.name,
         ai_enabled = config.ai.enabled,
         stripe_enabled = config.services.stripe_enabled,
-        image_gen_enabled = config.services.image_gen_enabled,
         pdf_enabled = config.services.pdf_pipeline_enabled,
     ));
 
@@ -218,24 +210,7 @@ pub fn render_compose(config: &CookestConfig) -> String {
         volumes.push_str("  ollama_data:\n");
     }
 
-    // ── Image Gen (optional) ──
-    if config.services.image_gen_enabled {
-        services.push_str(&format!(
-            r#"  image-gen:
-    image: ghcr.io/cookest/image-gen:latest
-    container_name: {prefix}_image_gen
-    restart: unless-stopped
-    ports:
-      - "8090:8090"
-    environment:
-      APP_API_URL: "http://app-api:8080"
-    networks:
-      - cookest
 
-"#,
-            prefix = prefix,
-        ));
-    }
 
     // ── Caddy reverse proxy (optional, for HTTPS) ──
     if config.network.https_enabled {
@@ -376,7 +351,6 @@ mod tests {
                 refresh_token_expiry_secs: 604800,
             },
             services: ServicesConfig {
-                image_gen_enabled: false,
                 stripe_enabled: false,
                 stripe_webhook_secret: String::new(),
                 pdf_pipeline_enabled: false,
@@ -478,21 +452,7 @@ mod tests {
         assert!(compose.contains("ollama_data:"));
     }
 
-    #[test]
-    fn compose_excludes_image_gen_when_disabled() {
-        let config = test_config();
-        let compose = render_compose(&config);
-        assert!(!compose.contains("image-gen:"));
-    }
 
-    #[test]
-    fn compose_includes_image_gen_when_enabled() {
-        let mut config = test_config();
-        config.services.image_gen_enabled = true;
-        let compose = render_compose(&config);
-        assert!(compose.contains("image-gen:"));
-        assert!(compose.contains("ghcr.io/cookest/image-gen:latest"));
-    }
 
     #[test]
     fn compose_excludes_caddy_when_no_https() {

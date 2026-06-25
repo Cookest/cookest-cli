@@ -38,7 +38,6 @@ pub async fn run(args: StatusArgs) -> Result<(), Box<dyn std::error::Error>> {
         ("App API", format!("{prefix}_app_api"), true),
         ("Admin Panel", format!("{prefix}_admin"), true),
         ("Ollama", format!("{prefix}_ollama"), config.ai.enabled),
-        ("Image Gen", format!("{prefix}_image_gen"), config.services.image_gen_enabled),
         ("Caddy", format!("{prefix}_caddy"), config.network.https_enabled),
     ];
 
@@ -116,14 +115,7 @@ pub async fn run(args: StatusArgs) -> Result<(), Box<dyn std::error::Error>> {
             "disabled".to_string().dimmed()
         }
     );
-    println!(
-        "  Image Gen:      {}",
-        if config.services.image_gen_enabled {
-            "enabled".green()
-        } else {
-            "disabled".dimmed()
-        }
-    );
+
     println!(
         "  Stripe:         {}",
         if config.services.stripe_enabled {

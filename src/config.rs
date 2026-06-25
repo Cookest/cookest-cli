@@ -48,7 +48,6 @@ pub struct AuthConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServicesConfig {
-    pub image_gen_enabled: bool,
     pub stripe_enabled: bool,
     pub stripe_webhook_secret: String,
     pub pdf_pipeline_enabled: bool,
@@ -172,7 +171,6 @@ impl CookestConfig {
                 refresh_token_expiry_secs: 604800,
             },
             services: ServicesConfig {
-                image_gen_enabled: false,
                 stripe_enabled: false,
                 stripe_webhook_secret: String::new(),
                 pdf_pipeline_enabled: false,
@@ -255,7 +253,6 @@ mod tests {
                 refresh_token_expiry_secs: 604800,
             },
             services: ServicesConfig {
-                image_gen_enabled: false,
                 stripe_enabled: false,
                 stripe_webhook_secret: String::new(),
                 pdf_pipeline_enabled: false,
