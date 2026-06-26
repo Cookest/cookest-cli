@@ -1,4 +1,5 @@
 pub mod backup;
+pub mod build;
 pub mod config;
 pub mod down;
 pub mod init;

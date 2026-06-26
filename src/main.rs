@@ -22,6 +22,9 @@ enum Commands {
     /// Interactive setup wizard — configure and deploy your Cookest instance
     Init(commands::init::InitArgs),
 
+    /// Build Docker images from source (clones from GitHub or uses a local path)
+    Build(commands::build::BuildArgs),
+
     /// Start all services
     Up(commands::up::UpArgs),
 
@@ -53,6 +56,7 @@ async fn main() {
 
     let result = match cli.command {
         Commands::Init(args) => commands::init::run(args).await,
+        Commands::Build(args) => commands::build::run(args).map_err(|e| e),
         Commands::Up(args) => commands::up::run(args).await,
         Commands::Down(args) => commands::down::run(args).await,
         Commands::Status(args) => commands::status::run(args).await,
