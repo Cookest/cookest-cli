@@ -13,6 +13,22 @@ pub struct CookestConfig {
     pub ai: AiConfig,
     pub email: EmailConfig,
     pub admin: AdminConfig,
+    #[serde(default)]
+    pub images: ImagesConfig,
+}
+
+/// Controls which Docker images are used when running the stack.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImagesConfig {
+    /// "ghcr" — pull from ghcr.io/cookest/* (default, no build required)
+    /// "local" — use locally-built images produced by `cookest build`
+    pub source: String,
+}
+
+impl Default for ImagesConfig {
+    fn default() -> Self {
+        Self { source: "ghcr".to_string() }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -195,6 +211,7 @@ impl CookestConfig {
                 email: String::new(),
                 password: String::new(),
             },
+            images: ImagesConfig::default(),
         }
     }
 }
@@ -277,6 +294,7 @@ mod tests {
                 email: "admin@test.local".to_string(),
                 password: "test_password".to_string(),
             },
+            images: ImagesConfig::default(),
         }
     }
 

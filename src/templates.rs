@@ -1,5 +1,15 @@
 use crate::config::CookestConfig;
 
+/// Resolve the Docker image name for a given service based on the configured image source.
+/// "ghcr" → pull from GHCR; "local" → use images built by `cookest build`.
+fn image_name(config: &CookestConfig, service: &str) -> String {
+    if config.images.source == "local" {
+        format!("cookest/{}:local", service)
+    } else {
+        format!("ghcr.io/cookest/{}:latest", service)
+    }
+}
+
 /// Generate docker-compose.yml content based on the configuration.
 pub fn render_compose(config: &CookestConfig) -> String {
     let mut services = String::new();
@@ -70,9 +80,10 @@ pub fn render_compose(config: &CookestConfig) -> String {
     ));
 
     // ── Food API ──
+    let food_api_image = image_name(config, "food-api");
     services.push_str(&format!(
         r#"  food-api:
-    image: ghcr.io/cookest/food-api:latest
+    image: {food_api_image}
     container_name: {prefix}_food_api
     restart: unless-stopped
     ports:
@@ -96,6 +107,7 @@ pub fn render_compose(config: &CookestConfig) -> String {
     ));
 
     // ── App API ──
+    let app_api_image = image_name(config, "app-api");
     let ollama_url = if config.ai.enabled {
         "http://ollama:11434".to_string()
     } else {
@@ -104,7 +116,7 @@ pub fn render_compose(config: &CookestConfig) -> String {
 
     services.push_str(&format!(
         r#"  app-api:
-    image: ghcr.io/cookest/app-api:latest
+    image: {app_api_image}
     container_name: {prefix}_app_api
     restart: unless-stopped
     ports:
@@ -160,9 +172,10 @@ pub fn render_compose(config: &CookestConfig) -> String {
     ));
 
     // ── Admin Panel ──
+    let admin_image = image_name(config, "admin");
     services.push_str(&format!(
         r#"  admin:
-    image: ghcr.io/cookest/admin:latest
+    image: {admin_image}
     container_name: {prefix}_admin
     restart: unless-stopped
     ports:
@@ -376,6 +389,7 @@ mod tests {
                 email: "admin@test.local".to_string(),
                 password: "test_password".to_string(),
             },
+            images: crate::config::ImagesConfig::default(),
         }
     }
 
@@ -506,6 +520,26 @@ mod tests {
         let compose = render_compose(&config);
         assert!(compose.contains("depends_on:"));
         assert!(compose.contains("service_healthy"));
+    }
+
+    #[test]
+    fn compose_uses_ghcr_images_by_default() {
+        let config = test_config();
+        let compose = render_compose(&config);
+        assert!(compose.contains("ghcr.io/cookest/app-api:latest"));
+        assert!(compose.contains("ghcr.io/cookest/food-api:latest"));
+        assert!(compose.contains("ghcr.io/cookest/admin:latest"));
+    }
+
+    #[test]
+    fn compose_uses_local_images_when_configured() {
+        let mut config = test_config();
+        config.images.source = "local".to_string();
+        let compose = render_compose(&config);
+        assert!(compose.contains("cookest/app-api:local"));
+        assert!(compose.contains("cookest/food-api:local"));
+        assert!(compose.contains("cookest/admin:local"));
+        assert!(!compose.contains("ghcr.io"));
     }
 
     #[test]
