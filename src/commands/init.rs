@@ -4,7 +4,7 @@ use dialoguer::{Confirm, Input, Select};
 use std::path::PathBuf;
 
 use crate::config::{
-    CookestConfig, generate_secret,
+    CookestConfig, ImagesConfig, generate_secret,
 };
 use crate::docker;
 use crate::templates;
@@ -18,6 +18,10 @@ pub struct InitArgs {
     /// Skip interactive prompts and use defaults
     #[arg(long)]
     pub defaults: bool,
+
+    /// Use locally-built images (from `cookest build`) instead of GHCR pre-built images
+    #[arg(long)]
+    pub from_source: bool,
 }
 
 pub async fn run(args: InitArgs) -> Result<(), Box<dyn std::error::Error>> {
@@ -48,7 +52,7 @@ pub async fn run(args: InitArgs) -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let config = if args.defaults {
+    let mut config = if args.defaults {
         let mut c = CookestConfig::default_with_secrets();
         c.admin.email = "admin@cookest.local".to_string();
         c.admin.password = generate_secret(16);
@@ -56,6 +60,15 @@ pub async fn run(args: InitArgs) -> Result<(), Box<dyn std::error::Error>> {
     } else {
         interactive_setup()?
     };
+
+    if args.from_source {
+        config.images = ImagesConfig { source: "local".to_string() };
+        println!(
+            "  {} Using locally-built images (run {} first if you haven't)",
+            "ℹ".cyan(),
+            "cookest build".cyan()
+        );
+    }
 
     // Write files
     println!("\n{}", "Generating configuration files...".dimmed());
@@ -204,6 +217,31 @@ fn interactive_setup() -> Result<CookestConfig, Box<dyn std::error::Error>> {
         .with_prompt("Enable PDF price scraping pipeline?")
         .default(false)
         .interact()?;
+
+    // ── Images ───────────────────────────────────────────
+    println!("\n{}", "── Docker Images ──".bold());
+
+    let image_choices = vec![
+        "GHCR (pre-built, recommended — just pull and run)",
+        "Local (build from source with `cookest build`)",
+    ];
+    let image_selection = Select::new()
+        .with_prompt("Image source")
+        .items(&image_choices)
+        .default(0)
+        .interact()?;
+    config.images = ImagesConfig {
+        source: if image_selection == 1 { "local" } else { "ghcr" }.to_string(),
+    };
+
+    if image_selection == 1 {
+        println!(
+            "  {} Run {} before {} to build the images.",
+            "ℹ".cyan(),
+            "cookest build".cyan(),
+            "cookest up".cyan()
+        );
+    }
 
     // ── Email ─────────────────────────────────────────────
     println!("\n{}", "── Email ──".bold());
