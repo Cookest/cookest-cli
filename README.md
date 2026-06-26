@@ -52,6 +52,37 @@ docker run --rm -it \
 
 ## Commands
 
+### `build`
+Clone the Cookest source repositories from GitHub and build Docker images locally.
+Use this if you want to run your own customised version instead of the pre-built
+GHCR images.
+
+```bash
+cookest build
+```
+
+Images are tagged `cookest/app-api:local`, `cookest/food-api:local`, and
+`cookest/admin:local`. After building, initialise the instance with the
+`--from-source` flag so the generated `docker-compose.yml` references your local images:
+
+```bash
+cookest build
+cookest init --from-source
+cookest up
+```
+
+To build from a local checkout instead of cloning from GitHub:
+
+```bash
+cookest build --local /path/to/source
+```
+
+To use a custom tag:
+
+```bash
+cookest build --tag v1.2.3
+```
+
 ### `init`
 Launches the interactive setup wizard. It will guide you through:
 - Setting the instance name and domain name (e.g., `localhost` or a custom domain).
