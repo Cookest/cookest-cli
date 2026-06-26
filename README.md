@@ -72,11 +72,20 @@ cookest init
 ```
 
 ### `up`
-Start the self-hosted Cookest stack. Equivalent to running `docker compose up -d`.
+Start the self-hosted Cookest stack. After the containers are healthy, automatically
+provisions the admin account using the credentials collected during `cookest init`.
 
 ```bash
 cookest up
 ```
+
+On first run the CLI will:
+1. Start all Docker Compose services
+2. Wait for the App API to pass its health check
+3. Call `POST /admin/setup` with the credentials from `cookest.toml`
+4. Print the admin email so you know it worked
+
+If the admin account already exists (subsequent `cookest up` runs), step 3 is a no-op.
 
 ### `down`
 Stop the self-hosted Cookest stack. Equivalent to running `docker compose down`.

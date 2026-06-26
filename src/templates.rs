@@ -127,6 +127,7 @@ pub fn render_compose(config: &CookestConfig) -> String {
       FOOD_API_KEY: ""
       RESEND_API_KEY: "{resend_key}"
       RESEND_FROM_EMAIL: "{resend_from}"
+      SELF_HOSTED: "true"
       RUST_LOG: "info,cookest_app_api=debug"
     volumes:
       - pdf_uploads:/data/pdfs
@@ -505,6 +506,13 @@ mod tests {
         let compose = render_compose(&config);
         assert!(compose.contains("depends_on:"));
         assert!(compose.contains("service_healthy"));
+    }
+
+    #[test]
+    fn compose_includes_self_hosted_flag() {
+        let config = test_config();
+        let compose = render_compose(&config);
+        assert!(compose.contains("SELF_HOSTED: \"true\""));
     }
 
     #[test]
