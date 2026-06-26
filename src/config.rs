@@ -13,6 +13,7 @@ pub struct CookestConfig {
     pub ai: AiConfig,
     pub email: EmailConfig,
     pub admin: AdminConfig,
+    pub s3: S3Config,
     #[serde(default)]
     pub images: ImagesConfig,
 }
@@ -93,6 +94,16 @@ pub struct EmailConfig {
 pub struct AdminConfig {
     pub email: String,
     pub password: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct S3Config {
+    pub endpoint: String,
+    pub access_key: String,
+    pub secret_key: String,
+    pub bucket: String,
+    pub region: String,
+    pub public_url: String,
 }
 
 impl CookestConfig {
@@ -211,6 +222,14 @@ impl CookestConfig {
                 email: String::new(),
                 password: String::new(),
             },
+            s3: S3Config {
+                endpoint: "http://minio:9000".to_string(),
+                access_key: "minioadmin".to_string(),
+                secret_key: generate_secret(16),
+                bucket: "cookest-images".to_string(),
+                region: "us-east-1".to_string(),
+                public_url: "".to_string(), // Will be populated dynamically based on network
+            },
             images: ImagesConfig::default(),
         }
     }
@@ -293,6 +312,14 @@ mod tests {
             admin: AdminConfig {
                 email: "admin@test.local".to_string(),
                 password: "test_password".to_string(),
+            },
+            s3: S3Config {
+                endpoint: "http://minio:9000".to_string(),
+                access_key: "minioadmin".to_string(),
+                secret_key: "minioadmin".to_string(),
+                bucket: "cookest-images".to_string(),
+                region: "us-east-1".to_string(),
+                public_url: "http://localhost:9000/cookest-images".to_string(),
             },
             images: ImagesConfig::default(),
         }

@@ -18,6 +18,7 @@ pub fn render_compose(config: &CookestConfig) -> String {
   food_db_data:
   app_db_data:
   pdf_uploads:
+  minio_data:
 "#,
     );
 
@@ -139,6 +140,12 @@ pub fn render_compose(config: &CookestConfig) -> String {
       FOOD_API_KEY: ""
       RESEND_API_KEY: "{resend_key}"
       RESEND_FROM_EMAIL: "{resend_from}"
+      S3_ENDPOINT: "http://minio:9000"
+      S3_ACCESS_KEY: "{s3_access}"
+      S3_SECRET_KEY: "{s3_secret}"
+      S3_BUCKET: "{s3_bucket}"
+      S3_REGION: "{s3_region}"
+      S3_PUBLIC_URL: "{s3_public_url}"
       SELF_HOSTED: "true"
       RUST_LOG: "info,cookest_app_api=debug"
     volumes:
@@ -148,6 +155,8 @@ pub fn render_compose(config: &CookestConfig) -> String {
         condition: service_healthy
       food-api:
         condition: service_started
+      minio:
+        condition: service_healthy
     networks:
       - cookest
 
@@ -169,6 +178,57 @@ pub fn render_compose(config: &CookestConfig) -> String {
         stripe_secret = config.services.stripe_webhook_secret,
         resend_key = config.email.resend_api_key,
         resend_from = config.email.from_address,
+        s3_access = config.s3.access_key,
+        s3_secret = config.s3.secret_key,
+        s3_bucket = config.s3.bucket,
+        s3_region = config.s3.region,
+        s3_public_url = if config.network.https_enabled {
+            format!("https://{}/images", config.network.domain)
+        } else {
+            format!("http://{}:{}/images", config.network.domain, config.network.admin_port)
+        },
+    ));
+
+    // ── MinIO ──
+    services.push_str(&format!(
+        r#"  minio:
+    image: minio/minio:latest
+    container_name: {prefix}_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: "{s3_access}"
+      MINIO_ROOT_PASSWORD: "{s3_secret}"
+    volumes:
+      - minio_data:/data
+    networks:
+      - cookest
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio-createbucket:
+    image: minio/mc:latest
+    container_name: {prefix}_minio_createbucket
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - cookest
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 {s3_access} {s3_secret} &&
+      /usr/bin/mc mb myminio/{s3_bucket} --ignore-existing &&
+      /usr/bin/mc anonymous set public myminio/{s3_bucket}
+      "
+
+"#,
+        prefix = prefix,
+        s3_access = config.s3.access_key,
+        s3_secret = config.s3.secret_key,
+        s3_bucket = config.s3.bucket,
     ));
 
     // ── Admin Panel ──
@@ -244,6 +304,7 @@ pub fn render_compose(config: &CookestConfig) -> String {
       - app-api
       - food-api
       - admin
+      - minio
     networks:
       - cookest
 
@@ -288,6 +349,11 @@ pub fn render_caddyfile(config: &CookestConfig) -> String {
         reverse_proxy app-api:8080
     }}
 
+    handle /images/* {{
+        rewrite * /{s3_bucket}{{uri}}
+        reverse_proxy minio:9000
+    }}
+
     handle {{
         reverse_proxy admin:3000
     }}
@@ -295,6 +361,7 @@ pub fn render_caddyfile(config: &CookestConfig) -> String {
 "#,
         admin_email = config.admin.email,
         domain = config.network.domain,
+        s3_bucket = config.s3.bucket,
     )
 }
 
@@ -318,6 +385,11 @@ STRIPE_WEBHOOK_SECRET={stripe_secret}
 OLLAMA_MODEL={ollama_model}
 OLLAMA_VISION_MODEL={ollama_vision_model}
 
+# S3
+S3_ACCESS_KEY={s3_access}
+S3_SECRET_KEY={s3_secret}
+S3_BUCKET={s3_bucket}
+
 # Email (optional)
 RESEND_API_KEY={resend_key}
 RESEND_FROM_EMAIL={from_email}
@@ -328,6 +400,9 @@ RESEND_FROM_EMAIL={from_email}
         stripe_secret = config.services.stripe_webhook_secret,
         ollama_model = config.ai.ollama_model,
         ollama_vision_model = config.ai.ollama_vision_model,
+        s3_access = config.s3.access_key,
+        s3_secret = config.s3.secret_key,
+        s3_bucket = config.s3.bucket,
         resend_key = config.email.resend_api_key,
         from_email = config.email.from_address,
     )
